@@ -14,7 +14,7 @@ st.markdown("""
 
 """, unsafe_allow_html=True)
 
-── Plotly theme ──────────────────────────────────────────────────────────────
+# ── Plotly theme ──────────────────────────────────────────────────────────────
 PL = dict(
 paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(17,24,39,0.5)",
 font=dict(family="Space Grotesk", color="#e2e8f0", size=11),
@@ -33,7 +33,7 @@ def finding(icon, text):
 st.markdown(f'{icon}'
 f'{text}', unsafe_allow_html=True)
 
-── Sidebar ───────────────────────────────────────────────────────────────────
+# ── Sidebar ───────────────────────────────────────────────────────────────────
 with st.sidebar:
 st.markdown("### 🔬 DataLens AI")
 st.caption("Business-ready EDA for data roles")
@@ -49,10 +49,10 @@ st.divider()
 st.markdown("AI Model")
 st.caption("Powered by Groq Llama 3.3 70B")
 
-── Hero ──────────────────────────────────────────────────────────────────────
+# ── Hero ──────────────────────────────────────────────────────────────────────
 st.markdown("""
 
-── Upload ────────────────────────────────────────────────────────────────────
+# ── Upload ────────────────────────────────────────────────────────────────────
 uploaded = st.file_uploader("Upload your CSV", type=["csv"], label_visibility="collapsed")
 if uploaded is None:
 c1, c2, c3 = st.columns([1,2,1])
@@ -65,7 +65,7 @@ Sales data · Customer data · Financial reports · Any tabular CSV
 """, unsafe_allow_html=True)
 st.stop()
 
-── Load & profile ────────────────────────────────────────────────────────────
+# ── Load & profile ────────────────────────────────────────────────────────────
 @st.cache_data(show_spinner=False)
 def load_and_profile(file):
 df = pd.read_csv(file)
@@ -90,7 +90,7 @@ missing = int(df.isnull().sum().sum())
 miss_pct = round(missing / df.size * 100, 1)
 dupes = int(df.duplicated().sum())
 
-── KPI bar ───────────────────────────────────────────────────────────────────
+# ── KPI bar ───────────────────────────────────────────────────────────────────
 miss_cls = "kpi-good" if miss_pct == 0 else ("kpi-warn" if miss_pct < 5 else "kpi-bad")
 dupe_cls = "kpi-good" if dupes == 0 else "kpi-warn"
 st.markdown(f"""
@@ -99,7 +99,7 @@ st.markdown(f"""
 tabs = st.tabs(["📋 Overview","📊 Distributions","🔗 Relationships",
 "📈 Trends","🧹 Data Quality","💼 Business Summary","🤖 Ask AI"])
 
-─── TAB 1: OVERVIEW ─────────────────────────────────────────────────────────
+# ─── TAB 1: OVERVIEW ─────────────────────────────────────────────────────────
 with tabs[0]:
 sec("📋","Dataset Preview")
 st.dataframe(df.head(preview_n), use_container_width=True, height=280)
@@ -141,7 +141,7 @@ rows.append({
 })
 st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
 
-─── TAB 2: DISTRIBUTIONS ────────────────────────────────────────────────────
+# ─── TAB 2: DISTRIBUTIONS ────────────────────────────────────────────────────
 with tabs[1]:
 if not num_cols:
 st.warning("No numeric columns to plot.")
@@ -235,7 +235,7 @@ color_discrete_sequence=PL["colorway"])
 fig_pie.update_layout(**PL)
 st.plotly_chart(fig_pie, use_container_width=True)
 
-─── TAB 3: RELATIONSHIPS ────────────────────────────────────────────────────
+# ─── TAB 3: RELATIONSHIPS ────────────────────────────────────────────────────
 with tabs[2]:
 if len(num_cols) < 2:
 st.warning("Need at least 2 numeric columns.")
@@ -300,7 +300,7 @@ fig_pp.update_traces(marker=dict(size=3))
 fig_pp.update_layout(**{**PL,"margin"(l=10,r=10,t=30,b=10)})
 st.plotly_chart(fig_pp, use_container_width=True)
 
-─── TAB 4: TRENDS ───────────────────────────────────────────────────────────
+# ─── TAB 4: TRENDS ───────────────────────────────────────────────────────────
 with tabs[3]:
 sec("📈","Time Series & Trends")
 if date_cols:
@@ -357,7 +357,7 @@ fig_t.update_layout(**{**PL,"height",
 "xaxis_title":"Index","yaxis_title"})
 st.plotly_chart(fig_t, use_container_width=True)
 
-─── TAB 5: DATA QUALITY ─────────────────────────────────────────────────────
+# ─── TAB 5: DATA QUALITY ─────────────────────────────────────────────────────
 with tabs[4]:
 c1, c2 = st.columns(2)
 
@@ -420,7 +420,7 @@ dtype_df = pd.DataFrame({
 })
 st.dataframe(dtype_df, use_container_width=True, hide_index=True)
 
-─── TAB 6: BUSINESS SUMMARY ─────────────────────────────────────────────────
+# ─── TAB 6: BUSINESS SUMMARY ─────────────────────────────────────────────────
 with tabs[5]:
 sec("💼","Automated Business Findings")
 
@@ -541,7 +541,7 @@ st.download_button("⬇️ Download Business Report",
 file_name="datalens_business_report.txt",
 mime="text/plain")
 
-─── TAB 7: ASK AI ───────────────────────────────────────────────────────────
+# ─── TAB 7: ASK AI ───────────────────────────────────────────────────────────
 with tabs[6]:
 sec("🤖","Ask AI About Your Data")
 st.markdown('Powered by Groq Llama 3.3 70B · Ask anything about your dataset — business questions, modeling advice, anomaly explanations.', unsafe_allow_html=True)
