@@ -504,7 +504,7 @@ with t3:
             height=max(400, len(numeric_cols)*42),
         )
         fig4.update_traces(textfont_size=10)
-        fig4.update_layout(**PLOTLY_LAYOUT, margin=dict(l=10,r=10,t=30,b=10))
+        fig4.update_layout(**{**PLOTLY_LAYOUT, "margin": dict(l=10, r=10, t=30, b=10)})
         st.plotly_chart(fig4, use_container_width=True)
 
         section("🏆", "Strongest Correlations")
