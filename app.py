@@ -166,6 +166,18 @@ st.markdown("""
         border-radius: 10px;
         margin: 1rem 0;
     }
+
+    /* Health score badge */
+    .health-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.6rem;
+        font-weight: 800;
+        padding: 0.6rem 1.4rem;
+        border-radius: 12px;
+        color: white;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -230,7 +242,10 @@ if uploaded_file is None:
 def load_data(file):
     """Load and process CSV file with duplicate column handling"""
     df = pd.read_csv(file)
-    
+
+    duplicate_warning = False
+    datetime_converted = []
+
     # Handle duplicate column names
     if df.columns.duplicated().any():
         # Rename duplicate columns
@@ -241,9 +256,7 @@ def load_data(file):
                 for i in range(sum(cols == dup))
             ]
         df.columns = cols
-        
-        # Show warning to user
-        st.warning("⚠️ Duplicate column names detected and have been renamed for analysis")
+        duplicate_warning = True
     
     # Smart type conversion
     for col in df.columns:
@@ -254,14 +267,21 @@ def load_data(file):
             except:
                 pass
         
-        # Try datetime conversion
+        # Try datetime conversion - only commit if it's confidently a date column
         if df[col].dtype == 'object':
             try:
-                df[col] = pd.to_datetime(df[col])
+                converted = pd.to_datetime(df[col], errors="coerce")
+                # Require at least 80% of non-null values to parse successfully,
+                # otherwise leave the column as-is (avoids false positives on
+                # short numeric/code columns that pandas can misread as dates)
+                non_null = df[col].notna().sum()
+                if non_null > 0 and (converted.notna().sum() / non_null) >= 0.8:
+                    df[col] = converted
+                    datetime_converted.append(col)
             except:
                 pass
     
-    return df
+    return df, duplicate_warning, datetime_converted
 
 # ── Helper function for safe plotting ──────────────────────────────────
 def safe_plot(func, *args, **kwargs):
@@ -273,12 +293,18 @@ def safe_plot(func, *args, **kwargs):
         return None
 
 with st.spinner("🔄 Loading and analyzing data..."):
-    df = load_data(uploaded_file)
+    df, duplicate_col_warning, datetime_converted_cols = load_data(uploaded_file)
+
+if duplicate_col_warning:
+    st.warning("⚠️ Duplicate column names detected and have been renamed for analysis")
 
 # Identify column types
 numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
 categorical_cols = df.select_dtypes(include=['object', 'category']).columns.tolist()
 datetime_cols = df.select_dtypes(include=['datetime64']).columns.tolist()
+
+if datetime_cols:
+    st.success(f"📅 Detected {len(datetime_cols)} date column(s): {', '.join(datetime_cols)}")
 
 # Calculate metrics
 total_rows = len(df)
@@ -286,10 +312,37 @@ total_cols = len(df.columns)
 missing_values = df.isnull().sum().sum()
 missing_pct = round(missing_values / (total_rows * total_cols) * 100, 1) if (total_rows * total_cols) > 0 else 0
 duplicates = df.duplicated().sum()
+duplicates_pct = round((duplicates / total_rows * 100), 1) if total_rows > 0 else 0
+
+# ── Dataset Quality Score ───────────────────────────────────────────────
+# Normalized so a few duplicate rows in a huge dataset don't tank the score
+# the same way they would in a tiny one.
+quality_score = 100
+quality_score -= missing_pct * 2
+quality_score -= duplicates_pct
+quality_score = max(0, round(quality_score))
+
+if quality_score >= 90:
+    quality_color = "#4CAF50"
+    quality_label = "Excellent"
+elif quality_score >= 70:
+    quality_color = "#FF9800"
+    quality_label = "Good"
+else:
+    quality_color = "#f44336"
+    quality_label = "Needs Attention"
 
 # ── Metrics Dashboard ──────────────────────────────────────────────────
 st.markdown("### 📊 Dataset Overview")
-col1, col2, col3, col4, col5 = st.columns(5)
+col0, col1, col2, col3, col4, col5 = st.columns(6)
+
+with col0:
+    st.markdown(f"""
+    <div class="metric-card" style="border-left-color: {quality_color};">
+        <div class="label">💯 Quality Score</div>
+        <div class="value">{quality_score}<span style="font-size:0.9rem;color:#888;">/100</span></div>
+    </div>
+    """, unsafe_allow_html=True)
 
 with col1:
     st.markdown(f"""
@@ -337,11 +390,11 @@ st.divider()
 
 # ── Main Tabs ──────────────────────────────────────────────────────────
 tab1, tab2, tab3, tab4, tab5 = st.tabs([
-    "📋 Data Preview",
-    "📊 Visualizations",
-    "🔗 Relationships",
-    "📈 Trends",
-    "💡 Insights"
+    "📋 Data Profiling",
+    "📊 Exploratory Analysis",
+    "🔗 Correlation Intelligence",
+    "📈 Time-Series Analytics",
+    "💡 Business Insights"
 ])
 
 # ── TAB 1: Data Preview ──────────────────────────────────────────────
@@ -643,6 +696,55 @@ with tab4:
 # ── TAB 5: Insights ────────────────────────────────────────────────────
 with tab5:
     st.markdown("#### 💡 Automated Business Insights")
+
+    # ── AI-style summary banner ──────────────────────────────────────
+    summary_lines = []
+    if missing_pct == 0:
+        summary_lines.append(("✓", "Low missing values", "#4CAF50"))
+    elif missing_pct < 5:
+        summary_lines.append(("✓", f"Acceptable missing values ({missing_pct}%)", "#4CAF50"))
+    else:
+        summary_lines.append(("⚠", f"High missing values ({missing_pct}%)", "#f44336"))
+
+    if duplicates == 0:
+        summary_lines.append(("✓", "No duplicate records", "#4CAF50"))
+    else:
+        summary_lines.append(("⚠", f"{duplicates} duplicate records found", "#f44336"))
+
+    # Check for highly skewed numeric features for the summary
+    skewed_features = []
+    for col in numeric_cols:
+        try:
+            s = df[col].dropna().skew()
+            if abs(s) > 1.5:
+                skewed_features.append(col)
+        except:
+            pass
+
+    if skewed_features:
+        summary_lines.append(("⚠", f"{len(skewed_features)} highly skewed numeric feature(s)", "#FF9800"))
+    else:
+        summary_lines.append(("✓", "Clean numeric distributions", "#4CAF50"))
+
+    if categorical_cols:
+        summary_lines.append(("✓", "Categorical structure identified", "#4CAF50"))
+
+    summary_html = "".join(
+        f'<div style="margin:0.3rem 0;color:{c};">{icon} {text}</div>'
+        for icon, text, c in summary_lines
+    )
+
+    st.markdown(f"""
+    <div class="insight-card" style="display:flex; align-items:center; gap:2rem;">
+        <div>
+            <span class="health-badge" style="background:{quality_color};">{quality_score}/100</span>
+            <div style="margin-top:0.4rem; color:#888; font-size:0.85rem;">Dataset Health Score</div>
+        </div>
+        <div>{summary_html}</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.divider()
     
     # Generate insights
     insights = []
@@ -702,8 +804,11 @@ with tab5:
             unique_count = df[col].nunique()
             if unique_count == 1:
                 insights.append(("⚠️", f"{col} has only one unique value - consider dropping"))
-            elif unique_count == len(df):
-                insights.append(("🆔", f"{col} is likely an ID column - consider excluding from analysis"))
+            elif unique_count > len(df) * 0.8:
+                insights.append((
+                    "🆔",
+                    f"{col} behaves like an identifier with {unique_count} unique values"
+                ))
             elif unique_count > 20:
                 insights.append(("🏷️", f"{col} has high cardinality ({unique_count} categories)"))
         except:
@@ -728,7 +833,8 @@ with tab5:
     insight_text += "=" * 50 + "\n\n"
     insight_text += f"Dataset: {uploaded_file.name}\n"
     insight_text += f"Rows: {total_rows:,} | Columns: {total_cols}\n"
-    insight_text += f"Missing: {missing_pct}% | Duplicates: {duplicates}\n\n"
+    insight_text += f"Missing: {missing_pct}% | Duplicates: {duplicates}\n"
+    insight_text += f"Dataset Health Score: {quality_score}/100 ({quality_label})\n\n"
     insight_text += "Key Insights:\n"
     insight_text += "-" * 30 + "\n"
     
@@ -746,7 +852,7 @@ with tab5:
 st.divider()
 st.markdown("""
 <div style="text-align: center; color: #888; padding: 1rem;">
-    <p>🚀 DataLens AI v2.0 • Professional Data Analysis Tool</p>
+    <p>Built with Streamlit • Pandas • Plotly • Statistical Profiling</p>
     <p style="font-size: 0.8rem;">No API required • 100% Free • Open Source</p>
 </div>
 """, unsafe_allow_html=True)
