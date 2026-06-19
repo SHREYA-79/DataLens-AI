@@ -544,18 +544,46 @@ with tabs[5]:
             if cv > 80:
                 findings.append(("📊", f"<b>{col}</b> has high variability (CV={cv:.0f}%). Investigate outliers or natural subgroups."))
 
-    # Correlation insights
-    if len(num_cols) >= 2:
-        corr2 = df[num_cols].corr().abs()
-        np.fill_diagonal(corr2.values, 0)
-        max_corr = corr2.max().max()
+# Correlation insights
+if len(num_cols) >= 2:
+
+    corr2 = df[num_cols].corr().abs().copy()
+
+    # Safe diagonal reset
+    for i in range(len(corr2)):
+        corr2.iat[i, i] = 0
+
+    max_corr = corr2.max().max()
+
+    if pd.notna(max_corr):
+
         if max_corr >= 0.9:
+
             cols_hc = corr2[corr2 >= 0.9].stack().index.tolist()
+
             if cols_hc:
                 a, b = cols_hc[0]
-                findings.append(("🔗", f"<b>High multicollinearity</b> detected between <b>{a}</b> and <b>{b}</b> (r={corr2.loc[a,b]:.2f}). May cause issues in regression models."))
+
+                findings.append(
+                    (
+                        "🔗",
+                        f"<b>High multicollinearity</b> detected between "
+                        f"<b>{a}</b> and <b>{b}</b> "
+                        f"(r={corr2.loc[a,b]:.2f}). "
+                        f"May cause issues in regression models."
+                    )
+                )
+
         elif max_corr >= 0.7:
-            findings.append(("🔗", f"Moderate-to-strong correlations exist (max r={max_corr:.2f}). Good signal for predictive modeling."))
+
+            findings.append(
+                (
+                    "🔗",
+                    f"Moderate-to-strong correlations exist "
+                    f"(max r={max_corr:.2f}). "
+                    f"Good signal for predictive modeling."
+                )
+            )
 
     # Cardinality
     for col in cat_cols:
