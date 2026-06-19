@@ -1,4 +1,8 @@
-from groq import Groq
+"""
+DataLens AI - Intelligent Data Analysis Assistant
+A complete, API-free data exploration tool for professionals
+"""
+
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -7,683 +11,674 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import io
 import warnings
-from scipy import stats as scipy_stats
+from scipy import stats
 warnings.filterwarnings("ignore")
 
-st.set_page_config(page_title="DataLens AI", page_icon="🔬", layout="wide")
-
-# ── Plotly theme ──────────────────────────────────────────────────────────────
-PL = dict(
-    paper_bgcolor="rgba(0,0,0,0)", 
-    plot_bgcolor="rgba(17,24,39,0.5)",
-    font=dict(family="Space Grotesk", color="#e2e8f0", size=11),
-    margin=dict(l=10, r=10, t=36, b=10),
-    colorway=["#3b82f6","#8b5cf6","#10b981","#f59e0b","#ef4444","#06b6d4","#f43f5e","#a3e635"],
-    xaxis=dict(gridcolor="#1e2d45", zeroline=False, showgrid=True),
-    yaxis=dict(gridcolor="#1e2d45", zeroline=False, showgrid=True),
-    legend=dict(bgcolor="rgba(0,0,0,0)", bordercolor="rgba(0,0,0,0)"),
+# Page Configuration
+st.set_page_config(
+    page_title="DataLens AI",
+    page_icon="📊",
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
 
-def sec(icon, title):
-    st.markdown(f'<div style="margin: 12px 0 8px 0; font-size: 18px; font-weight: 600;">{icon} {title}</div>', unsafe_allow_html=True)
-
-def finding(icon, text):
-    st.markdown(f'<div style="padding: 8px 0; border-bottom: 1px solid #1e2d45;">{icon} {text}</div>', unsafe_allow_html=True)
-
-# ── Sidebar ───────────────────────────────────────────────────────────────────
-with st.sidebar:
-    st.markdown("### 🔬 DataLens AI")
-    st.caption("Business-ready EDA for data roles")
-    st.divider()
-    
-    # API Key Input
-    st.markdown("### 🔑 API Configuration")
-    api_key_input = st.text_input(
-        "Groq API Key",
-        type="password",
-        placeholder="Enter your Groq API key",
-        help="Get your API key from https://console.groq.com"
-    )
-    
-    # Try to get API key from secrets if available
-    if not api_key_input:
-        try:
-            api_key_input = st.secrets["GROQ_API_KEY"]
-        except:
-            pass
-    
-    st.divider()
-    st.markdown("Display")
-    preview_n = st.slider("Preview rows", 5, 100, 15)
-    chart_h = st.slider("Chart height", 300, 650, 400)
-    st.divider()
-    st.markdown("Analysis")
-    corr_method = st.radio("Correlation", ["pearson","spearman"], horizontal=True)
-    outlier_z = st.slider("Outlier Z-threshold", 2.0, 4.0, 3.0, 0.5)
-    st.divider()
-    st.markdown("AI Model")
-    st.caption("Powered by Groq Llama 3.3 70B")
-
-# ── Hero ──────────────────────────────────────────────────────────────────────
+# Custom CSS for modern UI
 st.markdown("""
-<div style="text-align: center; padding: 20px 0;">
-    <h1 style="font-size: 48px; background: linear-gradient(135deg, #3b82f6, #8b5cf6); 
-               -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
-        🔬 DataLens AI
-    </h1>
-    <p style="font-size: 18px; color: #94a3b8;">Instant AI-powered data exploration for business decisions</p>
+<style>
+    /* Main container */
+    .main {
+        padding: 0rem 1rem;
+    }
+    
+    /* Header styling */
+    .header-container {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 2rem;
+        border-radius: 15px;
+        margin-bottom: 2rem;
+        text-align: center;
+        color: white;
+        box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
+    }
+    
+    .header-container h1 {
+        font-size: 2.5rem;
+        margin: 0;
+        font-weight: 700;
+    }
+    
+    .header-container p {
+        font-size: 1.1rem;
+        opacity: 0.9;
+        margin-top: 0.5rem;
+    }
+    
+    /* Metric cards */
+    .metric-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin: 1rem 0;
+    }
+    
+    .metric-card {
+        background: #1e1e1e;
+        padding: 1.2rem;
+        border-radius: 12px;
+        border-left: 4px solid #667eea;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        transition: transform 0.2s;
+    }
+    
+    .metric-card:hover {
+        transform: translateY(-3px);
+    }
+    
+    .metric-card .label {
+        font-size: 0.8rem;
+        color: #888;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    
+    .metric-card .value {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: #fff;
+        margin-top: 0.3rem;
+    }
+    
+    /* Insight cards */
+    .insight-card {
+        background: #1e1e1e;
+        padding: 1.2rem;
+        border-radius: 10px;
+        border: 1px solid #333;
+        margin: 0.5rem 0;
+        transition: all 0.2s;
+    }
+    
+    .insight-card:hover {
+        border-color: #667eea;
+    }
+    
+    .insight-card .icon {
+        font-size: 1.5rem;
+        margin-right: 0.5rem;
+    }
+    
+    /* Section headers */
+    .section-title {
+        font-size: 1.5rem;
+        font-weight: 600;
+        margin: 1.5rem 0 1rem 0;
+        color: #fff;
+        border-bottom: 2px solid #333;
+        padding-bottom: 0.5rem;
+    }
+    
+    /* Button styling */
+    .stButton > button {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        padding: 0.6rem 2rem;
+        border-radius: 25px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        width: 100%;
+    }
+    
+    .stButton > button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    }
+    
+    /* Tabs styling */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 2px;
+        background-color: #1e1e1e;
+        border-radius: 10px;
+        padding: 0.5rem;
+    }
+    
+    .stTabs [data-baseweb="tab"] {
+        border-radius: 8px;
+        padding: 0.5rem 1rem;
+        color: #888;
+    }
+    
+    .stTabs [aria-selected="true"] {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white !important;
+    }
+    
+    /* Dataframe styling */
+    .dataframe-container {
+        background: #1e1e1e;
+        padding: 1rem;
+        border-radius: 10px;
+        border: 1px solid #333;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# ── Header ─────────────────────────────────────────────────────────────
+st.markdown("""
+<div class="header-container">
+    <h1>📊 DataLens AI</h1>
+    <p>Professional Data Analysis & Visualization Tool</p>
+    <p style="font-size: 0.9rem; opacity: 0.7;">No API required • Instant Insights • Business Ready</p>
 </div>
 """, unsafe_allow_html=True)
 
-# ── Upload ──────────────────────────────────────────────────────────────
-uploaded = st.file_uploader(
-    "Upload your CSV",
+# ── Sidebar ────────────────────────────────────────────────────────────
+with st.sidebar:
+    st.markdown("### ⚙️ Controls")
+    st.divider()
+    
+    # Display options
+    st.markdown("#### 📊 Display")
+    preview_rows = st.slider("Preview Rows", 5, 50, 10)
+    chart_height = st.slider("Chart Height", 300, 600, 400)
+    
+    st.divider()
+    
+    # Analysis options
+    st.markdown("#### 📈 Analysis")
+    corr_method = st.selectbox("Correlation", ["pearson", "spearman"])
+    outlier_threshold = st.slider("Outlier Threshold", 2.0, 4.0, 3.0, 0.5)
+    
+    st.divider()
+    st.caption("🚀 Made for data professionals")
+    st.caption("💡 Simple • Fast • Powerful")
+
+# ── File Upload ────────────────────────────────────────────────────────
+uploaded_file = st.file_uploader(
+    "📁 Upload Your Dataset (CSV)",
     type=["csv"],
-    label_visibility="collapsed"
+    help="Upload a CSV file to begin analysis"
 )
 
-if uploaded is None:
-    c1, c2, c3 = st.columns([1, 2, 1])
-    with c2:
-        st.info(
-            "📊 Drop your CSV here\n\n"
-            "Sales data • Customer data • Financial reports • Any tabular CSV"
-        )
+if uploaded_file is None:
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        st.info("""
+        ### 👋 Welcome to DataLens AI
+        
+        **Key Features:**
+        - 📊 **Instant Data Profiling** - Get insights in seconds
+        - 📈 **Interactive Visualizations** - Explore your data
+        - 📋 **Business Insights** - Actionable recommendations
+        - 🔍 **Data Quality Check** - Identify issues quickly
+        
+        **Getting Started:**
+        1. Upload a CSV file
+        2. Explore the tabs
+        3. Download insights
+        """)
     st.stop()
 
-# ── Load & profile ──────────────────────────────────────────────────────
-@st.cache_data(show_spinner=False)
-def load_and_profile(file):
+# ── Data Processing ────────────────────────────────────────────────────
+@st.cache_data
+def load_data(file):
+    """Load and process CSV file"""
     df = pd.read_csv(file)
     
-    # Smart dtype coercion
+    # Smart type conversion
     for col in df.columns:
-        if df[col].dtype == "object":
+        # Try numeric conversion
+        if df[col].dtype == 'object':
             try:
-                df[col] = pd.to_numeric(
-                    df[col].astype(str).str.replace(",", "")
-                )
+                df[col] = pd.to_numeric(df[col].astype(str).str.replace(',', ''))
             except:
                 pass
         
-        if df[col].dtype == "object":
+        # Try datetime conversion
+        if df[col].dtype == 'object':
             try:
-                df[col] = pd.to_datetime(
-                    df[col],
-                    infer_datetime_format=True
-                )
+                df[col] = pd.to_datetime(df[col])
             except:
                 pass
     
     return df
 
-with st.spinner("Profiling dataset..."):
-    df = load_and_profile(uploaded)
+with st.spinner("🔄 Loading and analyzing data..."):
+    df = load_data(uploaded_file)
 
-num_cols = df.select_dtypes(include="number").columns.tolist()
-cat_cols = df.select_dtypes(include=["object","category","bool"]).columns.tolist()
-date_cols = df.select_dtypes(include=["datetime","datetimetz"]).columns.tolist()
-missing = int(df.isnull().sum().sum())
-miss_pct = round(missing / df.size * 100, 1)
-dupes = int(df.duplicated().sum())
+# Identify column types
+numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
+categorical_cols = df.select_dtypes(include=['object', 'category']).columns.tolist()
+datetime_cols = df.select_dtypes(include=['datetime64']).columns.tolist()
 
-# ══════════════════════════════════════════════════════════════════════════════
-tabs = st.tabs(["📋 Overview","📊 Distributions","🔗 Relationships",
-                "📈 Trends","🧹 Data Quality","💼 Business Summary","🤖 Ask AI"])
+# Calculate metrics
+total_rows = len(df)
+total_cols = len(df.columns)
+missing_values = df.isnull().sum().sum()
+missing_pct = round(missing_values / (total_rows * total_cols) * 100, 1)
+duplicates = df.duplicated().sum()
 
-# ─── TAB 1: OVERVIEW ─────────────────────────────────────────────────────────
-with tabs[0]:
-    sec("📋","Dataset Preview")
-    st.dataframe(df.head(preview_n), use_container_width=True, height=280)
+# ── Metrics Dashboard ──────────────────────────────────────────────────
+st.markdown("### 📊 Dataset Overview")
+col1, col2, col3, col4, col5 = st.columns(5)
+
+with col1:
+    st.markdown(f"""
+    <div class="metric-card">
+        <div class="label">📋 Rows</div>
+        <div class="value">{total_rows:,}</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+with col2:
+    st.markdown(f"""
+    <div class="metric-card">
+        <div class="label">📑 Columns</div>
+        <div class="value">{total_cols}</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+with col3:
+    color = "#4CAF50" if missing_pct == 0 else "#FF9800" if missing_pct < 5 else "#f44336"
+    st.markdown(f"""
+    <div class="metric-card" style="border-left-color: {color};">
+        <div class="label">⚠️ Missing</div>
+        <div class="value">{missing_pct}%</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+with col4:
+    color = "#4CAF50" if duplicates == 0 else "#FF9800"
+    st.markdown(f"""
+    <div class="metric-card" style="border-left-color: {color};">
+        <div class="label">🔄 Duplicates</div>
+        <div class="value">{duplicates:,}</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+with col5:
+    st.markdown(f"""
+    <div class="metric-card">
+        <div class="label">📊 Numeric</div>
+        <div class="value">{len(numeric_cols)}</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+st.divider()
+
+# ── Main Tabs ──────────────────────────────────────────────────────────
+tab1, tab2, tab3, tab4, tab5 = st.tabs([
+    "📋 Data Preview",
+    "📊 Visualizations",
+    "🔗 Relationships",
+    "📈 Trends",
+    "💡 Insights"
+])
+
+# ── TAB 1: Data Preview ──────────────────────────────────────────────
+with tab1:
+    st.markdown("#### 🔍 Data Preview")
+    st.dataframe(df.head(preview_rows), use_container_width=True)
     
-    c1, c2 = st.columns(2)
-    with c1:
-        sec("🔢","Numeric Profile")
-        if num_cols:
-            desc = df[num_cols].describe().T.round(3)
-            desc["cv%"] = (desc["std"]/desc["mean"].abs()*100).round(1)
-            desc["skew"] = df[num_cols].skew().round(3)
-            st.dataframe(desc[["count","mean","std","min","50%","max","cv%","skew"]],
-                        use_container_width=True)
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("#### 📊 Numeric Summary")
+        if numeric_cols:
+            st.dataframe(
+                df[numeric_cols].describe().round(2),
+                use_container_width=True
+            )
         else:
-            st.info("No numeric columns.")
-    with c2:
-        sec("🔤","Categorical Profile")
-        if cat_cols:
-            rows = []
-            for c in cat_cols:
-                vc = df[c].value_counts()
-                rows.append({"Column": c, "Unique": df[c].nunique(),
-                            "Top": vc.index[0], "Top %": f"{vc.iloc[0]/len(df)*100:.1f}%",
-                            "Missing": df[c].isnull().sum()})
-            st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
-        else:
-            st.info("No categorical columns.")
+            st.info("No numeric columns found")
     
-    if num_cols:
-        sec("📐","Column-level Stats")
-        rows = []
-        for c in df.columns:
-            rows.append({
-                "Column": c, "Type": str(df[c].dtype),
-                "Nulls": df[c].isnull().sum(),
-                "Null%": f"{df[c].isnull().mean()*100:.1f}%",
-                "Unique": df[c].nunique(),
-                "Sample": str(df[c].dropna().iloc[0]) if df[c].notna().any() else "—"
-            })
-        st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+    with col2:
+        st.markdown("#### 📋 Column Information")
+        col_info = pd.DataFrame({
+            'Column': df.columns,
+            'Type': df.dtypes.astype(str),
+            'Unique': df.nunique().values,
+            'Missing': df.isnull().sum().values,
+            'Missing %': (df.isnull().sum() / len(df) * 100).round(1).values
+        })
+        st.dataframe(col_info, use_container_width=True, hide_index=True)
 
-# ─── TAB 2: DISTRIBUTIONS ────────────────────────────────────────────────────
-with tabs[1]:
-    if not num_cols:
-        st.warning("No numeric columns to plot.")
+# ── TAB 2: Visualizations ─────────────────────────────────────────────
+with tab2:
+    if not numeric_cols:
+        st.warning("No numeric columns available for visualization")
     else:
-        c1, c2, c3 = st.columns([2,2,1])
-        with c1: col = st.selectbox("Column", num_cols, key="d_col")
-        with c2: kind = st.selectbox("Chart type",
-                                ["Histogram + KDE","Box + Strip","Violin","ECDF","QQ Plot"], key="d_kind")
-        with c3: grp = st.selectbox("Group by", ["None"]+cat_cols, key="d_grp")
-        grp_arg = None if grp=="None" else grp
+        col1, col2 = st.columns([2, 1])
         
-        tmp = df[[col]+([grp] if grp_arg else [])].dropna()
+        with col1:
+            selected_col = st.selectbox("Select Column", numeric_cols)
         
-        if kind == "Histogram + KDE":
-            fig = px.histogram(tmp, x=col, color=grp_arg, nbins=40,
-                              barmode="overlay", opacity=0.7,
-                              marginal="violin", height=chart_h)
-        elif kind == "Box + Strip":
-            fig = px.box(tmp, y=col, color=grp_arg, points="all",
-                        height=chart_h, notched=True)
-        elif kind == "Violin":
-            fig = px.violin(tmp, y=col, color=grp_arg,
-                           box=True, points="outliers", height=chart_h)
-        elif kind == "ECDF":
-            fig = px.ecdf(tmp, x=col, color=grp_arg, height=chart_h)
-        else: # QQ
-            vals = tmp[col].dropna().sort_values()
-            theoretical = scipy_stats.norm.ppf(
-                np.linspace(0.01, 0.99, len(vals)))
-            fig = go.Figure()
-            fig.add_trace(go.Scatter(x=theoretical, y=vals.values,
-                                    mode="markers", marker=dict(color="#3b82f6", size=4, opacity=0.6),
-                                    name="Data"))
-            mn, mx = theoretical.min(), theoretical.max()
-            fig.add_trace(go.Scatter(x=[mn,mx],
-                                    y=[vals.mean()+vals.std()*mn, vals.mean()+vals.std()*mx],
-                                    mode="lines", line=dict(color="#ef4444", dash="dash"),
-                                    name="Normal ref"))
-            fig.update_layout(xaxis_title="Theoretical Quantiles",
-                            yaxis_title="Sample Quantiles",
-                            title=f"QQ Plot — {col}", height=chart_h)
+        with col2:
+            chart_type = st.selectbox(
+                "Chart Type",
+                ["Histogram", "Box Plot", "Violin Plot", "Density"]
+            )
         
-        fig.update_layout(**PL)
-        st.plotly_chart(fig, use_container_width=True)
-    
-    # Multi-distribution overview
-    if len(num_cols) > 1:
-        st.divider()
-        sec("📦","All Numeric Distributions")
-        sel_cols = st.multiselect("Select columns", num_cols, default=num_cols[:min(6,len(num_cols))], key="multi_dist")
-        if sel_cols:
-            cols_per_row = 3
-            rows_needed = (len(sel_cols) + cols_per_row - 1) // cols_per_row
-            fig_sub = make_subplots(rows=rows_needed, cols=cols_per_row,
-                                   subplot_titles=sel_cols)
-            for i, sc in enumerate(sel_cols):
-                r, c_ = divmod(i, cols_per_row)
-                vals = df[sc].dropna()
-                fig_sub.add_trace(
-                    go.Histogram(x=vals, nbinsx=30, name=sc,
-                                marker_color=PL["colorway"][i % len(PL["colorway"])],
-                                showlegend=False, opacity=0.8),
-                    row=r+1, col=c_+1)
-            fig_sub.update_layout(**{**PL, "height": rows_needed*220,
-                                    "showlegend": False})
-            fig_sub.update_annotations(font_size=10)
-            st.plotly_chart(fig_sub, use_container_width=True)
-    
-    # Category distributions
-    if cat_cols:
-        st.divider()
-        sec("🏷️","Category Distributions")
-        cat_pick = st.selectbox("Category column", cat_cols, key="cat_dist")
-        top_n = st.slider("Top N", 3, 30, 10, key="cat_n")
-        vc = df[cat_pick].value_counts().head(top_n).reset_index()
-        vc.columns = [cat_pick,"Count"]
-        vc["Pct"] = (vc["Count"]/len(df)*100).round(1)
-        col_a, col_b = st.columns(2)
-        with col_a:
-            fig_bar = px.bar(vc, x=cat_pick, y="Count",
-                            color="Count", color_continuous_scale="Blues",
-                            text="Pct", height=chart_h)
-            fig_bar.update_traces(texttemplate="%{text}%", textposition="outside")
-            fig_bar.update_layout(**{**PL,"coloraxis_showscale": False})
-            st.plotly_chart(fig_bar, use_container_width=True)
-        with col_b:
-            fig_pie = px.pie(vc, names=cat_pick, values="Count",
-                            hole=0.45, height=chart_h,
-                            color_discrete_sequence=PL["colorway"])
-            fig_pie.update_layout(**PL)
-            st.plotly_chart(fig_pie, use_container_width=True)
+        # Create visualization
+        fig = None
+        
+        if chart_type == "Histogram":
+            fig = px.histogram(
+                df, x=selected_col,
+                nbins=30,
+                title=f"Distribution of {selected_col}",
+                color_discrete_sequence=['#667eea']
+            )
+            fig.update_layout(
+                showlegend=False,
+                height=chart_height,
+                bargap=0.1
+            )
+        
+        elif chart_type == "Box Plot":
+            fig = px.box(
+                df, y=selected_col,
+                title=f"Box Plot of {selected_col}",
+                color_discrete_sequence=['#667eea']
+            )
+            fig.update_layout(height=chart_height)
+        
+        elif chart_type == "Violin Plot":
+            fig = px.violin(
+                df, y=selected_col,
+                box=True,
+                title=f"Violin Plot of {selected_col}",
+                color_discrete_sequence=['#667eea']
+            )
+            fig.update_layout(height=chart_height)
+        
+        elif chart_type == "Density":
+            fig = px.density_contour(
+                df, x=selected_col,
+                title=f"Density Plot of {selected_col}",
+                color_discrete_sequence=['#667eea']
+            )
+            fig.update_layout(height=chart_height)
+        
+        if fig:
+            st.plotly_chart(fig, use_container_width=True)
+        
+        # Categorical visualizations
+        if categorical_cols:
+            st.divider()
+            st.markdown("#### 🏷️ Categorical Analysis")
+            
+            cat_col = st.selectbox("Select Category", categorical_cols)
+            
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                # Bar chart
+                value_counts = df[cat_col].value_counts().head(10)
+                fig_bar = px.bar(
+                    x=value_counts.index,
+                    y=value_counts.values,
+                    title=f"Top Categories - {cat_col}",
+                    labels={'x': cat_col, 'y': 'Count'},
+                    color_discrete_sequence=['#667eea']
+                )
+                fig_bar.update_layout(showlegend=False, height=300)
+                st.plotly_chart(fig_bar, use_container_width=True)
+            
+            with col2:
+                # Pie chart
+                fig_pie = px.pie(
+                    values=value_counts.values,
+                    names=value_counts.index,
+                    title=f"Distribution - {cat_col}",
+                    hole=0.4
+                )
+                fig_pie.update_layout(height=300)
+                st.plotly_chart(fig_pie, use_container_width=True)
 
-# ─── TAB 3: RELATIONSHIPS ────────────────────────────────────────────────────
-with tabs[2]:
-    if len(num_cols) < 2:
-        st.warning("Need at least 2 numeric columns.")
+# ── TAB 3: Relationships ──────────────────────────────────────────────
+with tab3:
+    if len(numeric_cols) < 2:
+        st.warning("Need at least 2 numeric columns for correlation analysis")
     else:
-        # Correlation heatmap
-        sec("🔥","Correlation Matrix")
-        corr = df[num_cols].corr(method=corr_method).round(3)
-        fig_corr = px.imshow(corr, color_continuous_scale="RdBu_r",
-                            zmin=-1, zmax=1, text_auto=True, aspect="auto",
-                            height=max(380, len(num_cols)*40))
-        fig_corr.update_traces(textfont_size=9)
-        fig_corr.update_layout(**{**PL,"margin": dict(l=5,r=5,t=30,b=5)})
+        # Correlation matrix
+        st.markdown("#### 🔥 Correlation Matrix")
+        
+        corr_matrix = df[numeric_cols].corr(method=corr_method).round(2)
+        
+        fig_corr = px.imshow(
+            corr_matrix,
+            text_auto=True,
+            aspect="auto",
+            color_continuous_scale="RdBu_r",
+            zmin=-1, zmax=1,
+            title=f"Correlation Matrix ({corr_method})"
+        )
+        fig_corr.update_layout(height=max(400, len(numeric_cols) * 35))
         st.plotly_chart(fig_corr, use_container_width=True)
         
-        # Top pairs
-        sec("🏆","Strongest Relationships")
-        pairs = (corr.where(np.triu(np.ones(corr.shape),k=1).astype(bool))
-                .stack().reset_index())
-        pairs.columns = ["Feature A","Feature B","Correlation"]
-        pairs["|r|"] = pairs["Correlation"].abs()
-        pairs = pairs.sort_values("|r|",ascending=False).drop("|r|",axis=1).head(12)
-        pairs["Strength"] = pairs["Correlation"].abs().apply(
-            lambda x: "🔴 Strong" if x>=0.7 else ("🟡 Moderate" if x>=0.4 else "🟢 Weak"))
-        pairs["Direction"] = pairs["Correlation"].apply(
-            lambda x: "↑ Positive" if x>0 else "↓ Negative")
-        st.dataframe(pairs.style.background_gradient(subset=["Correlation"],cmap="RdBu_r"),
-                    use_container_width=True, hide_index=True)
-        
-        # Scatter
+        # Top correlations
         st.divider()
-        sec("🔵","Scatter Analysis")
-        s1,s2,s3,s4 = st.columns(4)
-        with s1: x_col = st.selectbox("X axis", num_cols, key="sc_x")
-        with s2: y_col = st.selectbox("Y axis", num_cols, index=min(1,len(num_cols)-1), key="sc_y")
-        with s3: sz_col= st.selectbox("Size", ["None"]+num_cols, key="sc_sz")
-        with s4: cl_col= st.selectbox("Color", ["None"]+cat_cols, key="sc_cl")
-        sz_arg = None if sz_col=="None" else sz_col
-        cl_arg = None if cl_col=="None" else cl_col
-        needed = list({x_col,y_col}|({sz_arg} if sz_arg else set())|({cl_arg} if cl_arg else set()))
-        sdf = df[needed].dropna()
-        fig_sc = px.scatter(sdf, x=x_col, y=y_col, color=cl_arg, size=sz_arg,
-                            opacity=0.65, height=chart_h,
-                            trendline="ols" if cl_arg is None else None)
-        fig_sc.update_layout(**PL)
-        st.plotly_chart(fig_sc, use_container_width=True)
+        st.markdown("#### 🏆 Strongest Correlations")
         
-        # Pair plot (small)
-        if len(num_cols) >= 3:
-            st.divider()
-            sec("🔷","Pair Plot")
-            pp_cols = st.multiselect("Columns", num_cols,
-                                    default=num_cols[:min(4,len(num_cols))], key="pp")
-            pp_color = st.selectbox("Color by", ["None"]+cat_cols, key="pp_cl")
-            if len(pp_cols) >= 2:
-                fig_pp = px.scatter_matrix(
-                    df[pp_cols+([pp_color] if pp_color!="None" else [])].dropna(),
-                    dimensions=pp_cols,
-                    color=None if pp_color=="None" else pp_color,
-                    opacity=0.5, height=550)
-                fig_pp.update_traces(marker=dict(size=3))
-                fig_pp.update_layout(**{**PL,"margin": dict(l=10,r=10,t=30,b=10)})
-                st.plotly_chart(fig_pp, use_container_width=True)
-
-# ─── TAB 4: TRENDS ───────────────────────────────────────────────────────────
-with tabs[3]:
-    sec("📈","Time Series & Trends")
-    if date_cols:
-        d1,d2,d3 = st.columns(3)
-        with d1: dt_col = st.selectbox("Date column", date_cols, key="ts_dt")
-        with d2: val_col = st.selectbox("Value column", num_cols, key="ts_val")
-        with d3: freq = st.selectbox("Resample", ["Raw","Daily","Weekly","Monthly","Quarterly"], key="ts_freq")
-        
-        ts = df[[dt_col, val_col]].dropna().sort_values(dt_col)
-        freq_map = {"Daily":"D","Weekly":"W","Monthly":"ME","Quarterly":"QE"}
-        if freq != "Raw":
-            ts = ts.set_index(dt_col)[val_col].resample(freq_map[freq]).agg(["sum","mean","count"]).reset_index()
-            ts.columns = [dt_col,"Sum","Mean","Count"]
-            metric_pick = st.radio("Metric", ["Sum","Mean","Count"], horizontal=True)
-            y_val = metric_pick
-        else:
-            y_val = val_col
-        
-        fig_ts = px.line(ts, x=dt_col, y=y_val, height=chart_h,
-                        markers=True if len(ts)<200 else False)
-        fig_ts.update_traces(line_color="#3b82f6")
-        fig_ts.update_layout(**PL)
-        st.plotly_chart(fig_ts, use_container_width=True)
-        
-        # Rolling average overlay
-        if freq == "Raw" and len(ts) > 20:
-            win = st.slider("Rolling average window", 2, min(90,len(ts)//3), 7)
-            ts2 = ts.copy()
-            ts2["Rolling"] = ts2[val_col].rolling(win).mean()
-            fig_r = go.Figure()
-            fig_r.add_trace(go.Scatter(x=ts2[dt_col], y=ts2[val_col],
-                                      mode="lines", name="Raw",
-                                      line=dict(color="#3b82f6", width=1), opacity=0.4))
-            fig_r.add_trace(go.Scatter(x=ts2[dt_col], y=ts2["Rolling"],
-                                      mode="lines", name=f"{win}-period MA",
-                                      line=dict(color="#f59e0b", width=2)))
-            fig_r.update_layout(**{**PL, "height": chart_h})
-            st.plotly_chart(fig_r, use_container_width=True)
-    else:
-        st.info("No date columns detected. Showing index-based trends.")
-        if num_cols:
-            tr_col = st.selectbox("Column", num_cols, key="trend_col")
-            win2 = st.slider("Rolling window", 2, min(50, len(df)//3), 5)
-            tdf = df[tr_col].dropna().reset_index(drop=True)
-            roll = tdf.rolling(win2).mean()
-            fig_t = go.Figure()
-            fig_t.add_trace(go.Scatter(y=tdf, mode="lines", name="Raw",
-                                      line=dict(color="#3b82f6",width=1), opacity=0.4))
-            fig_t.add_trace(go.Scatter(y=roll, mode="lines",
-                                      name=f"{win2}-point MA",
-                                      line=dict(color="#f59e0b",width=2)))
-            fig_t.update_layout(**{**PL,"height": chart_h,
-                                  "xaxis_title":"Index","yaxis_title": tr_col})
-            st.plotly_chart(fig_t, use_container_width=True)
-
-# ─── TAB 5: DATA QUALITY ─────────────────────────────────────────────────────
-with tabs[4]:
-    c1, c2 = st.columns(2)
-    
-    with c1:
-        sec("🕳️","Missing Values")
-        miss_df = df.isnull().sum().reset_index()
-        miss_df.columns = ["Column","Missing"]
-        miss_df["Pct"] = (miss_df["Missing"]/len(df)*100).round(2)
-        miss_df = miss_df[miss_df["Missing"]>0].sort_values("Missing",ascending=False)
-        if miss_df.empty:
-            st.success("✅ Zero missing values — dataset is complete.")
-        else:
-            fig_m = px.bar(miss_df, x="Column", y="Pct", text="Missing",
-                          color="Pct", color_continuous_scale="Reds", height=300)
-            fig_m.update_traces(textposition="outside")
-            fig_m.update_layout(**{**PL,"coloraxis_showscale": False,
-                                  "margin": dict(l=5,r=5,t=30,b=5)})
-            st.plotly_chart(fig_m, use_container_width=True)
-            st.dataframe(miss_df, use_container_width=True, hide_index=True)
-    
-    with c2:
-        sec("📐","Outlier Report (Z-score)")
-        if num_cols:
-            out_rows = []
-            for col in num_cols:
-                s = df[col].dropna()
-                z = np.abs((s - s.mean()) / s.std())
-                n_out = int((z > outlier_z).sum())
-                out_rows.append({
-                    "Column": col,
-                    "Outliers": n_out,
-                    "Pct%": round(n_out/len(df)*100,2),
-                    "Min": round(s.min(),3),
-                    "Max": round(s.max(),3),
-                    "Skew": round(s.skew(),3),
-                    "Flag": "⚠️" if n_out/len(df)>0.03 else "✅"
+        corr_pairs = []
+        for i in range(len(corr_matrix.columns)):
+            for j in range(i+1, len(corr_matrix.columns)):
+                corr_pairs.append({
+                    'Feature 1': corr_matrix.columns[i],
+                    'Feature 2': corr_matrix.columns[j],
+                    'Correlation': corr_matrix.iloc[i, j]
                 })
-            out_df = pd.DataFrame(out_rows).sort_values("Outliers",ascending=False)
-            st.dataframe(out_df, use_container_width=True, hide_index=True)
-    
-    sec("🔍","Duplicate Analysis")
-    dupes_df = df[df.duplicated(keep=False)]
-    dc1, dc2, dc3 = st.columns(3)
-    dc1.metric("Total duplicates", f"{dupes:,}")
-    dc2.metric("Pct of data", f"{dupes/len(df)*100:.2f}%")
-    dc3.metric("Unique rows", f"{len(df)-dupes:,}")
-    if dupes > 0:
-        st.warning(f"⚠️ {dupes} duplicate rows found. Consider deduplication before modeling.")
-        if st.checkbox("Preview duplicate rows"):
-            st.dataframe(dupes_df.head(20), use_container_width=True)
-    
-    sec("🧮","Data Type Summary")
-    dtype_df = pd.DataFrame({
-        "Column": df.columns,
-        "Dtype": df.dtypes.astype(str).values,
-        "Non-Null": df.count().values,
-        "Null": df.isnull().sum().values,
-        "Unique": [df[c].nunique() for c in df.columns],
-        "Sample": [str(df[c].dropna().iloc[0]) if df[c].notna().any() else "—" for c in df.columns],
-    })
-    st.dataframe(dtype_df, use_container_width=True, hide_index=True)
+        
+        corr_df = pd.DataFrame(corr_pairs)
+        corr_df['|Correlation|'] = corr_df['Correlation'].abs()
+        corr_df = corr_df.sort_values('|Correlation|', ascending=False).head(10)
+        corr_df['Strength'] = corr_df['Correlation'].apply(
+            lambda x: '🟢 Strong' if abs(x) >= 0.7 else 
+                     '🟡 Moderate' if abs(x) >= 0.4 else '🔴 Weak'
+        )
+        corr_df['Direction'] = corr_df['Correlation'].apply(
+            lambda x: '📈 Positive' if x > 0 else '📉 Negative'
+        )
+        
+        st.dataframe(
+            corr_df[['Feature 1', 'Feature 2', 'Correlation', 'Strength', 'Direction']],
+            use_container_width=True,
+            hide_index=True
+        )
+        
+        # Scatter plot
+        st.divider()
+        st.markdown("#### 🔵 Scatter Plot")
+        
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            x_col = st.selectbox("X-Axis", numeric_cols, key="scatter_x")
+        with col2:
+            y_col = st.selectbox("Y-Axis", numeric_cols, key="scatter_y")
+        with col3:
+            color_col = st.selectbox(
+                "Color By",
+                ["None"] + categorical_cols,
+                key="scatter_color"
+            )
+        
+        if x_col and y_col:
+            color = None if color_col == "None" else color_col
+            
+            fig_scatter = px.scatter(
+                df,
+                x=x_col,
+                y=y_col,
+                color=color,
+                title=f"{y_col} vs {x_col}",
+                trendline="ols" if color is None else None,
+                opacity=0.7
+            )
+            fig_scatter.update_layout(height=chart_height)
+            st.plotly_chart(fig_scatter, use_container_width=True)
 
-# ─── TAB 6: BUSINESS SUMMARY ─────────────────────────────────────────────────
-with tabs[5]:
-    sec("💼","Automated Business Findings")
+# ── TAB 4: Trends ──────────────────────────────────────────────────────
+with tab4:
+    if datetime_cols:
+        st.markdown("#### 📈 Time Series Analysis")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            date_col = st.selectbox("Date Column", datetime_cols)
+        with col2:
+            value_col = st.selectbox("Value Column", numeric_cols)
+        
+        if date_col and value_col:
+            # Prepare time series data
+            ts_data = df[[date_col, value_col]].dropna()
+            ts_data = ts_data.sort_values(date_col)
+            
+            # Resample options
+            resample_freq = st.selectbox(
+                "Resample",
+                ["None", "Daily", "Weekly", "Monthly", "Quarterly"]
+            )
+            
+            if resample_freq != "None":
+                freq_map = {
+                    "Daily": "D",
+                    "Weekly": "W",
+                    "Monthly": "ME",
+                    "Quarterly": "QE"
+                }
+                ts_data = ts_data.set_index(date_col)
+                ts_data = ts_data.resample(freq_map[resample_freq]).mean().reset_index()
+            
+            # Plot
+            fig_ts = px.line(
+                ts_data,
+                x=date_col,
+                y=value_col,
+                title=f"{value_col} Over Time",
+                markers=len(ts_data) < 50
+            )
+            fig_ts.update_layout(height=chart_height)
+            st.plotly_chart(fig_ts, use_container_width=True)
+            
+            # Rolling average
+            if len(ts_data) > 10:
+                window = st.slider("Rolling Window", 2, 20, 5)
+                
+                ts_data['Rolling Avg'] = ts_data[value_col].rolling(window).mean()
+                
+                fig_roll = px.line(
+                    ts_data,
+                    x=date_col,
+                    y=[value_col, 'Rolling Avg'],
+                    title=f"{value_col} with {window}-Period Rolling Average",
+                    labels={'value': value_col}
+                )
+                fig_roll.update_layout(height=chart_height)
+                st.plotly_chart(fig_roll, use_container_width=True)
     
-    findings = []
-    
-    # Volume
-    findings.append(("📦", f"Dataset contains {df.shape[0]:,} records across {df.shape[1]} fields."))
-    
-    # Data quality
-    if miss_pct == 0 and dupes == 0:
-        findings.append(("✅", "Data quality is excellent — no missing values or duplicates detected."))
     else:
-        if miss_pct > 0:
-            findings.append(("⚠️", f"{miss_pct}% missing data detected. Imputation or removal required before modeling."))
-        if dupes > 0:
-            findings.append(("⚠️", f"{dupes:,} duplicate rows ({dupes/len(df)*100:.1f}%) may skew aggregations and model training."))
+        st.info("No date columns found. Please ensure your data has datetime columns for trend analysis.")
+
+# ── TAB 5: Insights ────────────────────────────────────────────────────
+with tab5:
+    st.markdown("#### 💡 Automated Business Insights")
+    
+    # Generate insights
+    insights = []
+    
+    # Data quality insights
+    if missing_pct == 0:
+        insights.append(("✅", "Perfect data quality - no missing values"))
+    elif missing_pct < 5:
+        insights.append(("⚠️", f"Good data quality - only {missing_pct}% missing values"))
+    else:
+        insights.append(("🚨", f"Data quality needs attention - {missing_pct}% missing values"))
+    
+    if duplicates > 0:
+        insights.append(("🔄", f"Found {duplicates} duplicate rows ({duplicates/len(df)*100:.1f}%)"))
     
     # Numeric insights
-    if num_cols:
-        for col in num_cols:
-            s = df[col].dropna()
-            cv = s.std()/s.mean()*100 if s.mean() != 0 else 0
-            if abs(s.skew()) > 1.5:
-                direction = "right (positive)" if s.skew() > 0 else "left (negative)"
-                findings.append(("📊", f"{col} is heavily skewed {direction} (skew={s.skew():.2f}). Consider log transformation for modeling."))
-            if cv > 80:
-                findings.append(("📊", f"{col} has high variability (CV={cv:.0f}%). Investigate outliers or natural subgroups."))
+    for col in numeric_cols[:5]:  # Limit to top 5
+        data = df[col].dropna()
+        skew = data.skew()
+        cv = (data.std() / data.mean()) * 100 if data.mean() != 0 else 0
+        
+        if abs(skew) > 1.5:
+            direction = "right" if skew > 0 else "left"
+            insights.append((
+                "📊",
+                f"{col} is heavily skewed {direction} (skew={skew:.2f}) - consider transformation"
+            ))
+        
+        if cv > 80:
+            insights.append((
+                "📊",
+                f"{col} has high variability (CV={cv:.1f}%) - investigate outliers"
+            ))
     
     # Correlation insights
-    if len(num_cols) >= 2:
-        corr2 = df[num_cols].corr().abs().copy()
-        
-        # Safe diagonal reset
-        for i in range(len(corr2)):
-            corr2.iat[i, i] = 0
-        
-        max_corr = corr2.max().max()
-        
-        if pd.notna(max_corr):
-            if max_corr >= 0.9:
-                cols_hc = corr2[corr2 >= 0.9].stack().index.tolist()
-                if cols_hc:
-                    a, b = cols_hc[0]
-                    findings.append(
-                        (
-                            "🔗",
-                            f"High multicollinearity detected between "
-                            f"{a} and {b} "
-                            f"(r={corr2.loc[a,b]:.2f}). "
-                            f"May cause issues in regression models."
-                        )
-                    )
-            elif max_corr >= 0.7:
-                findings.append(
-                    (
+    if len(numeric_cols) >= 2:
+        corr_matrix = df[numeric_cols].corr().abs()
+        for i in range(len(corr_matrix.columns)):
+            for j in range(i+1, len(corr_matrix.columns)):
+                if corr_matrix.iloc[i, j] > 0.8:
+                    insights.append((
                         "🔗",
-                        f"Moderate-to-strong correlations exist "
-                        f"(max r={max_corr:.2f}). "
-                        f"Good signal for predictive modeling."
-                    )
-                )
+                        f"Strong correlation between {corr_matrix.columns[i]} and {corr_matrix.columns[j]} "
+                        f"(r={corr_matrix.iloc[i, j]:.2f})"
+                    ))
     
-    # Cardinality
-    for col in cat_cols:
-        un = df[col].nunique()
-        if un == len(df):
-            findings.append(("🆔", f"{col} has all unique values — likely an ID column. Exclude from modeling."))
-        elif un == 1:
-            findings.append(("⚠️", f"{col} has only 1 unique value — zero variance. Drop this column."))
-        elif un > 50:
-            findings.append(("🏷️", f"{col} has high cardinality ({un} categories). Consider encoding or grouping before ML."))
+    # Categorical insights
+    for col in categorical_cols[:3]:
+        unique_count = df[col].nunique()
+        if unique_count == 1:
+            insights.append(("⚠️", f"{col} has only one unique value - consider dropping"))
+        elif unique_count == len(df):
+            insights.append(("🆔", f"{col} is likely an ID column - consider excluding from analysis"))
+        elif unique_count > 20:
+            insights.append(("🏷️", f"{col} has high cardinality ({unique_count} categories)"))
     
-    # Date insight
-    if date_cols:
-        for dc in date_cols:
-            span = (df[dc].max() - df[dc].min()).days
-            findings.append(("📅", f"{dc} spans {span} days ({df[dc].min().date()} → {df[dc].max().date()})."))
+    # Display insights
+    if insights:
+        for icon, text in insights[:15]:  # Limit to 15 insights
+            st.markdown(f"""
+            <div class="insight-card">
+                <span class="icon">{icon}</span> {text}
+            </div>
+            """, unsafe_allow_html=True)
+    else:
+        st.success("🎉 No significant issues found! Your data looks clean and well-structured.")
     
-    for icon, text in findings:
-        finding(icon, text)
-    
-    # Numeric summary table
-    if num_cols:
-        st.divider()
-        sec("📊","Key Metrics at a Glance")
-        kpi_rows = []
-        for col in num_cols:
-            s = df[col].dropna()
-            kpi_rows.append({
-                "Metric": col,
-                "Mean": f"{s.mean():,.2f}",
-                "Median": f"{s.median():,.2f}",
-                "Std Dev": f"{s.std():,.2f}",
-                "Min": f"{s.min():,.2f}",
-                "Max": f"{s.max():,.2f}",
-                "CV%": f"{s.std()/s.mean()*100:.1f}%" if s.mean()!=0 else "—",
-                "Skew": f"{s.skew():.2f}",
-            })
-        st.dataframe(pd.DataFrame(kpi_rows), use_container_width=True, hide_index=True)
-    
-    # Download report
+    # Download insights
     st.divider()
-    report_lines = ["DataLens AI — Business Summary Report", "="*50, ""]
-    for icon, text in findings:
-        clean = text.replace("","").replace("","")
-        report_lines.append(f"{icon} {clean}")
-    report_lines += ["", "="*50, f"Rows: {df.shape[0]:,} | Columns: {df.shape[1]} | Missing: {miss_pct}% | Duplicates: {dupes}"]
-    st.download_button("⬇️ Download Business Report",
-                      "\n".join(report_lines),
-                      file_name="datalens_business_report.txt",
-                      mime="text/plain")
-
-# ─── TAB 7: ASK AI ───────────────────────────────────────────────────────────
-with tabs[6]:
-    sec("🤖","Ask AI About Your Data")
-    st.markdown('Powered by Groq Llama 3.3 70B · Ask anything about your dataset — business questions, modeling advice, anomaly explanations.', unsafe_allow_html=True)
+    st.markdown("#### 📥 Export Insights")
     
-    # Check if API key is provided
-    if not api_key_input:
-        st.warning("⚠️ Please enter your Groq API key in the sidebar to use AI features.")
-        st.info("Get your free API key from [Groq Console](https://console.groq.com)")
-        st.stop()
+    insight_text = "DataLens AI - Insights Report\n"
+    insight_text += "=" * 50 + "\n\n"
+    insight_text += f"Dataset: {uploaded_file.name}\n"
+    insight_text += f"Rows: {total_rows:,} | Columns: {total_cols}\n"
+    insight_text += f"Missing: {missing_pct}% | Duplicates: {duplicates}\n\n"
+    insight_text += "Key Insights:\n"
+    insight_text += "-" * 30 + "\n"
     
-    quick = st.selectbox("Quick questions", [
-        "Custom question ↓",
-        "What are the top 5 business insights from this data?",
-        "Which columns are most useful for predicting outcomes?",
-        "What data quality issues should I fix before analysis?",
-        "Explain the key distributions and what they mean for the business",
-        "What KPIs can I derive from this dataset?",
-        "How should I handle the missing values and outliers?",
-        "What visualizations would best communicate insights from this data?",
-        "Suggest a data-driven strategy based on the patterns in this dataset",
-    ], key="ai_quick")
+    for icon, text in insights:
+        insight_text += f"{icon} {text}\n"
     
-    question = st.text_area("Your question",
-                           value="" if quick=="Custom question ↓" else quick,
-                           placeholder="e.g. Which customer segments drive the most revenue?",
-                           height=85, key="ai_q")
-    
-    if st.button("🔍 Analyze", use_container_width=False):
-        if not question.strip():
-            st.warning("Type a question above or pick one from the list.")
-        else:
-            # Prepare data summary for AI
-            summary = df.describe(include="all").round(3).to_string()
-            miss_info = df.isnull().sum().to_string()
-            
-            # Create findings text without HTML tags
-            finding_texts = []
-            for i, (icon, text) in enumerate(findings, 1):
-                clean_text = text.replace("✅", "").replace("⚠️", "").replace("📊", "").strip()
-                finding_texts.append(f"{i}. {clean_text}")
-            finding_txt = "\n".join(finding_texts)
-            
-            prompt = f"""You are a senior data analyst and business intelligence expert. Analyze this dataset thoroughly and answer the user's question.
+    st.download_button(
+        "📥 Download Insights Report",
+        insight_text,
+        file_name="data_insights_report.txt",
+        mime="text/plain"
+    )
 
-DATASET PROFILE:
-
-Shape: {df.shape[0]:,} rows × {df.shape[1]} columns
-
-Numeric columns: {num_cols}
-
-Categorical columns: {cat_cols}
-
-Date columns: {date_cols}
-
-Missing: {miss_pct}% | Duplicates: {dupes}
-
-STATISTICAL SUMMARY:
-{summary}
-
-MISSING VALUES:
-{miss_info}
-
-AUTO-DETECTED FINDINGS:
-{finding_txt}
-
-SAMPLE DATA (first 5 rows):
-{df.head(5).to_string()}
-
-USER QUESTION: {question}
-
-Respond as a data professional presenting to a business stakeholder. Be specific — reference actual column names, numbers, and percentages from the data. Use structured sections with clear headers. Include:
-
-1. Direct answer to the question
-2. Supporting evidence from the data
-3. Business implications
-4. Recommended next steps or actions
-
-Keep it concise, sharp, and actionable."""
-            
-            with st.spinner("AI is analyzing your data..."):
-                try:
-                    # Initialize Groq client with the API key
-                    client = Groq(api_key=api_key_input)
-                    
-                    response = client.chat.completions.create(
-                        model="llama-3.3-70b-versatile",
-                        messages=[
-                            {
-                                "role": "user",
-                                "content": prompt
-                            }
-                        ],
-                        temperature=0.3,
-                        max_tokens=2000
-                    )
-                    
-                    answer = response.choices[0].message.content
-                    
-                    st.success("✅ Analysis complete!")
-                    
-                    # Display the answer in a nice format
-                    st.markdown("### 📊 AI Analysis Results")
-                    st.markdown(f'<div style="background: rgba(17, 24, 39, 0.7); padding: 20px; border-radius: 10px; border-left: 4px solid #3b82f6;">{answer}</div>', unsafe_allow_html=True)
-                    
-                    # Download option
-                    buf = io.StringIO()
-                    buf.write(f"DataLens AI Analysis\n")
-                    buf.write(f"="*50 + "\n")
-                    buf.write(f"Question: {question}\n")
-                    buf.write(f"="*50 + "\n\n")
-                    buf.write(answer)
-                    
-                    st.download_button(
-                        "⬇️ Download Analysis",
-                        buf.getvalue(),
-                        file_name="datalens_ai_analysis.txt",
-                        mime="text/plain"
-                    )
-                    
-                except Exception as e:
-                    st.error(f"❌ AI Error: {str(e)}")
-                    if "401" in str(e):
-                        st.warning("Your API key appears to be invalid. Please check it and try again.")
-                        st.info("Get a valid API key from: https://console.groq.com")
+# ── Footer ─────────────────────────────────────────────────────────────
+st.divider()
+st.markdown("""
+<div style="text-align: center; color: #888; padding: 1rem;">
+    <p>🚀 DataLens AI v2.0 • Professional Data Analysis Tool</p>
+    <p style="font-size: 0.8rem;">No API required • 100% Free • Open Source</p>
+</div>
+""", unsafe_allow_html=True)
