@@ -64,31 +64,10 @@ if uploaded is None:
     c1, c2, c3 = st.columns([1, 2, 1])
 
     with c2:
-        st.markdown("""
-        <div style="border:2px dashed #1e2d45;
-                    border-radius:14px;
-                    padding:3.5rem 2rem;
-                    text-align:center;
-                    background:#111827;
-                    margin-top:1rem;">
-
-            <div style="font-size:3rem;margin-bottom:1rem">📊</div>
-
-            <p style="color:#e2e8f0;
-                      font-weight:600;
-                      font-size:1.1rem;
-                      margin:0 0 0.5rem">
-                Drop your CSV here
-            </p>
-
-            <p style="color:#64748b;
-                      font-size:0.88rem;
-                      margin:0">
-                Sales data · Customer data · Financial reports · Any tabular CSV
-            </p>
-
-        </div>
-        """, unsafe_allow_html=True)
+        st.info(
+            "📊 Drop your CSV here\n\n"
+            "Sales data • Customer data • Financial reports • Any tabular CSV"
+        )
 
     st.stop()
 
