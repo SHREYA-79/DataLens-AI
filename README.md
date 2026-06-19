@@ -1,5 +1,8 @@
 # 📊 DataLens AI
 
+[🚀 Live Demo](https://your-app.streamlit.app)
+
+
 Professional Data Analysis & Visualization Tool
 
 DataLens AI is an interactive analytics platform that transforms CSV datasets into actionable business insights through automated exploratory data analysis, statistical profiling, correlation analysis, trend discovery, and interactive visualizations.
@@ -32,6 +35,5 @@ cd DataLens-AI
 pip install -r requirements.txt
 streamlit run app.py
 
-## Live Demo
 
-https://your-app.streamlit.app
+
