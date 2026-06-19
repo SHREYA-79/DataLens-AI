@@ -8,8 +8,41 @@ import pandas as pd
 import numpy as np
 import plotly.express as px
 import warnings
+import os
 
 warnings.filterwarnings("ignore")
+
+# ── Self-contained theme setup ───────────────────────────────────────────
+# Streamlit reads its dark/amber theme from .streamlit/config.toml, which
+# normally has to sit in its own folder next to the script. To keep this a
+# single file, the block below writes that config to disk automatically the
+# first time the app runs — no second file to download or manage.
+#
+# Note: on newer Streamlit versions the running server detects a newly
+# created config.toml on its own and applies it immediately. On older
+# versions, a config file created after the server has already started
+# requires a full restart (stop and re-run `streamlit run ...`) to take
+# effect — this is a Streamlit limitation, not something a script can force.
+# If the dark theme doesn't appear after the first run, restart the app once
+# and it will load correctly from then on.
+_THEME_TOML = """[theme]
+base = "dark"
+primaryColor = "#E8A33D"
+backgroundColor = "#0E1117"
+secondaryBackgroundColor = "#161B22"
+textColor = "#E8E9EB"
+font = "sans serif"
+"""
+
+_config_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".streamlit")
+_config_path = os.path.join(_config_dir, "config.toml")
+_just_created_theme = False
+
+if not os.path.exists(_config_path):
+    os.makedirs(_config_dir, exist_ok=True)
+    with open(_config_path, "w") as _f:
+        _f.write(_THEME_TOML)
+    _just_created_theme = True
 
 # Page Configuration
 st.set_page_config(
@@ -18,6 +51,14 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+if _just_created_theme:
+    st.warning(
+        "First-time setup: theme file created. If the page above doesn't "
+        "already look dark/amber, stop this app and run "
+        "`streamlit run datalens_ai.py` again — it'll load themed from then on.",
+        icon="🎨"
+    )
 
 # Custom CSS — instrument-panel design system
 st.markdown("""
@@ -279,20 +320,32 @@ uploaded_file = st.file_uploader(
 if uploaded_file is None:
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        st.info("""
-        ### 👋 Welcome to DataLens AI
-        
-        **Key Features:**
-        - 📊 **Instant Data Profiling** - Get insights in seconds
-        - 📈 **Interactive Visualizations** - Explore your data
-        - 📋 **Business Insights** - Actionable recommendations
-        - 🔍 **Data Quality Check** - Identify issues quickly
-        
-        **Getting Started:**
-        1. Upload a CSV file
-        2. Explore the tabs
-        3. Download insights
-        """)
+        st.markdown("""
+        <div style="background: var(--panel); border: 1px solid var(--hairline);
+                    border-left: 2px solid var(--steel); border-radius: 5px;
+                    padding: 1.6rem 1.8rem; color: var(--text);">
+            <h3 style="margin-top:0; color: var(--text);">Welcome to DataLens AI</h3>
+            <p style="font-family: var(--mono); font-size: 0.75rem; color: var(--text-dim);
+                      text-transform: uppercase; letter-spacing: 0.08em; margin-top: -0.5rem;">
+                Key Features
+            </p>
+            <ul style="line-height: 2;">
+                <li><b>Instant Data Profiling</b> — get insights in seconds</li>
+                <li><b>Interactive Visualizations</b> — explore your data</li>
+                <li><b>Business Insights</b> — automated recommendations</li>
+                <li><b>Data Quality Check</b> — identify issues quickly</li>
+            </ul>
+            <p style="font-family: var(--mono); font-size: 0.75rem; color: var(--text-dim);
+                      text-transform: uppercase; letter-spacing: 0.08em; margin-top: 1.2rem;">
+                Getting Started
+            </p>
+            <ol style="line-height: 2;">
+                <li>Upload a CSV file</li>
+                <li>Explore the tabs</li>
+                <li>Download insights</li>
+            </ol>
+        </div>
+        """, unsafe_allow_html=True)
     st.stop()
 
 # ── Data Processing ────────────────────────────────────────────────────
