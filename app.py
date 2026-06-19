@@ -19,197 +19,255 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS for modern UI
+# Custom CSS — instrument-panel design system
 st.markdown("""
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-    /* Main container */
-    .main {
-        padding: 0rem 1rem;
+    :root {
+        --ink: #0E1117;
+        --panel: #161B22;
+        --panel-raised: #1C232D;
+        --hairline: #2A323D;
+        --amber: #E8A33D;
+        --amber-dim: #8A6228;
+        --steel: #5B8AB0;
+        --good: #5FA777;
+        --warn: #D89A4A;
+        --bad: #C75450;
+        --text: #E8E9EB;
+        --text-dim: #8B93A0;
+        --mono: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+        --sans: 'Inter', -apple-system, sans-serif;
     }
-    
-    /* Header styling */
+
+    .main { padding: 0rem 1.2rem; }
+    body, .stApp { font-family: var(--sans); }
+
+    /* ── Header: instrument faceplate ───────────────────────────── */
     .header-container {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        padding: 2rem;
-        border-radius: 15px;
-        margin-bottom: 2rem;
-        text-align: center;
-        color: white;
-        box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
+        background: linear-gradient(180deg, var(--panel) 0%, var(--ink) 100%);
+        border: 1px solid var(--hairline);
+        border-top: 2px solid var(--amber);
+        padding: 1.8rem 2rem;
+        border-radius: 6px;
+        margin-bottom: 1.6rem;
+        position: relative;
+        overflow: hidden;
     }
-    
+
+    .header-container::before {
+        content: "";
+        position: absolute;
+        top: 0; left: 0; right: 0; height: 18px;
+        background-image: repeating-linear-gradient(
+            90deg, var(--hairline) 0px, var(--hairline) 1px,
+            transparent 1px, transparent 14px
+        );
+        opacity: 0.6;
+    }
+
+    .header-eyebrow {
+        font-family: var(--mono);
+        font-size: 0.72rem;
+        letter-spacing: 0.18em;
+        color: var(--amber);
+        text-transform: uppercase;
+        margin-bottom: 0.4rem;
+    }
+
     .header-container h1 {
-        font-size: 2.5rem;
+        font-family: var(--sans);
+        font-size: 2.1rem;
         margin: 0;
         font-weight: 700;
+        color: var(--text);
+        letter-spacing: -0.02em;
     }
-    
-    .header-container p {
-        font-size: 1.1rem;
-        opacity: 0.9;
-        margin-top: 0.5rem;
+
+    .header-container .subtitle {
+        font-size: 0.98rem;
+        color: var(--text-dim);
+        margin-top: 0.45rem;
     }
-    
-    /* Metric cards */
-    .metric-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 1rem;
-        margin: 1rem 0;
+
+    .header-container .tagline {
+        font-family: var(--mono);
+        font-size: 0.78rem;
+        color: var(--text-dim);
+        opacity: 0.8;
+        margin-top: 0.7rem;
+        letter-spacing: 0.02em;
     }
-    
+
+    /* ── Metric / readout cards ─────────────────────────────────── */
     .metric-card {
-        background: #1e1e1e;
-        padding: 1.2rem;
-        border-radius: 12px;
-        border-left: 4px solid #667eea;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-        transition: transform 0.2s;
+        background: var(--panel);
+        padding: 1rem 1.1rem;
+        border-radius: 5px;
+        border: 1px solid var(--hairline);
+        border-left: 2px solid var(--amber-dim);
+        transition: border-color 0.15s ease;
     }
-    
+
     .metric-card:hover {
-        transform: translateY(-3px);
+        border-left-color: var(--amber);
     }
-    
+
     .metric-card .label {
-        font-size: 0.8rem;
-        color: #888;
+        font-family: var(--mono);
+        font-size: 0.68rem;
+        color: var(--text-dim);
         text-transform: uppercase;
-        letter-spacing: 1px;
+        letter-spacing: 0.1em;
     }
-    
+
     .metric-card .value {
-        font-size: 1.8rem;
+        font-family: var(--mono);
+        font-size: 1.65rem;
         font-weight: 700;
-        color: #fff;
-        margin-top: 0.3rem;
+        color: var(--text);
+        margin-top: 0.25rem;
+        letter-spacing: -0.01em;
     }
-    
-    /* Insight cards */
+
+    /* ── Insight cards ──────────────────────────────────────────── */
     .insight-card {
-        background: #1e1e1e;
-        padding: 1.2rem;
-        border-radius: 10px;
-        border: 1px solid #333;
-        margin: 0.5rem 0;
-        transition: all 0.2s;
+        background: var(--panel);
+        padding: 1rem 1.2rem;
+        border-radius: 5px;
+        border: 1px solid var(--hairline);
+        border-left: 2px solid var(--steel);
+        margin: 0.45rem 0;
+        transition: border-color 0.15s ease;
+        color: var(--text);
     }
-    
+
     .insight-card:hover {
-        border-color: #667eea;
+        border-left-color: var(--amber);
     }
-    
+
     .insight-card .icon {
-        font-size: 1.5rem;
-        margin-right: 0.5rem;
+        font-size: 1.2rem;
+        margin-right: 0.6rem;
     }
-    
-    /* Section headers */
+
+    /* ── Section headers ────────────────────────────────────────── */
     .section-title {
-        font-size: 1.5rem;
+        font-size: 1.3rem;
         font-weight: 600;
-        margin: 1.5rem 0 1rem 0;
-        color: #fff;
-        border-bottom: 2px solid #333;
+        margin: 1.4rem 0 0.9rem 0;
+        color: var(--text);
+        border-bottom: 1px solid var(--hairline);
         padding-bottom: 0.5rem;
     }
-    
-    /* Button styling */
-    .stButton > button {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
+
+    /* ── Buttons ─────────────────────────────────────────────────── */
+    .stButton > button, .stDownloadButton > button {
+        background: var(--amber);
+        color: var(--ink);
         border: none;
-        padding: 0.6rem 2rem;
-        border-radius: 25px;
+        padding: 0.55rem 1.6rem;
+        border-radius: 4px;
         font-weight: 600;
-        transition: all 0.3s ease;
+        font-family: var(--sans);
+        transition: all 0.15s ease;
         width: 100%;
     }
-    
-    .stButton > button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+
+    .stButton > button:hover, .stDownloadButton > button:hover {
+        background: #F2B458;
+        transform: translateY(-1px);
     }
-    
-    /* Tabs styling */
+
+    /* ── Tabs: control strip ─────────────────────────────────────── */
     .stTabs [data-baseweb="tab-list"] {
-        gap: 2px;
-        background-color: #1e1e1e;
-        border-radius: 10px;
-        padding: 0.5rem;
+        gap: 0px;
+        background-color: var(--panel);
+        border-radius: 6px;
+        border: 1px solid var(--hairline);
+        padding: 0.3rem;
     }
-    
+
     .stTabs [data-baseweb="tab"] {
-        border-radius: 8px;
-        padding: 0.5rem 1rem;
-        color: #888;
+        border-radius: 3px;
+        padding: 0.5rem 1.1rem;
+        color: var(--text-dim);
+        font-family: var(--mono);
+        font-size: 0.85rem;
     }
-    
+
     .stTabs [aria-selected="true"] {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white !important;
+        background: var(--panel-raised);
+        color: var(--amber) !important;
+        box-shadow: inset 0 -2px 0 var(--amber);
     }
-    
-    /* Dataframe styling */
+
+    /* ── Dataframe container ────────────────────────────────────── */
     .dataframe-container {
-        background: #1e1e1e;
+        background: var(--panel);
         padding: 1rem;
-        border-radius: 10px;
-        border: 1px solid #333;
+        border-radius: 5px;
+        border: 1px solid var(--hairline);
     }
-    
-    /* Error handling */
+
+    /* ── Error / alert container ────────────────────────────────── */
     .error-container {
-        background: #2a1a1a;
-        border: 1px solid #ff4444;
+        background: #211514;
+        border: 1px solid var(--bad);
         padding: 1rem;
-        border-radius: 10px;
+        border-radius: 5px;
         margin: 1rem 0;
     }
 
-    /* Health score badge */
+    /* ── Health score badge ─────────────────────────────────────── */
     .health-badge {
         display: inline-flex;
-        align-items: center;
+        align-items: baseline;
         justify-content: center;
-        font-size: 1.6rem;
+        font-family: var(--mono);
+        font-size: 1.7rem;
         font-weight: 800;
-        padding: 0.6rem 1.4rem;
-        border-radius: 12px;
-        color: white;
+        padding: 0.55rem 1.3rem;
+        border-radius: 5px;
+        color: var(--ink);
+        letter-spacing: -0.02em;
     }
+
+    /* ── Misc text harmonization ────────────────────────────────── */
+    h3, h4 { font-family: var(--sans); letter-spacing: -0.01em; }
+    .stCaption, [data-testid="stCaptionContainer"] { font-family: var(--mono) !important; }
 </style>
 """, unsafe_allow_html=True)
 
 # ── Header ─────────────────────────────────────────────────────────────
 st.markdown("""
 <div class="header-container">
-    <h1>📊 DataLens AI</h1>
-    <p>Professional Data Analysis & Visualization Tool</p>
-    <p style="font-size: 0.9rem; opacity: 0.7;">No API required • Instant Insights • Business Ready</p>
+    <div class="header-eyebrow">DATA INSTRUMENT // v2.1</div>
+    <h1>DataLens AI</h1>
+    <p class="subtitle">Statistical profiling, correlation analysis, and automated insight extraction for tabular data.</p>
+    <p class="tagline">NO API KEY · LOCAL PROCESSING · INSTANT READOUT</p>
 </div>
 """, unsafe_allow_html=True)
 
 # ── Sidebar ────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown("### ⚙️ Controls")
+    st.markdown("##### CONTROL PANEL")
     st.divider()
     
     # Display options
-    st.markdown("#### 📊 Display")
+    st.markdown("**Display**")
     preview_rows = st.slider("Preview Rows", 5, 50, 10)
     chart_height = st.slider("Chart Height", 300, 600, 400)
     
     st.divider()
     
     # Analysis options
-    st.markdown("#### 📈 Analysis")
+    st.markdown("**Analysis**")
     corr_method = st.selectbox("Correlation", ["pearson", "spearman"])
     outlier_threshold = st.slider("Outlier Threshold", 2.0, 4.0, 3.0, 0.5)
     
     st.divider()
-    st.caption("🚀 Made for data professionals")
-    st.caption("💡 Simple • Fast • Powerful")
+    st.caption("local processing · no data leaves this session")
 
 # ── File Upload ────────────────────────────────────────────────────────
 uploaded_file = st.file_uploader(
@@ -323,17 +381,17 @@ quality_score -= duplicates_pct
 quality_score = max(0, round(quality_score))
 
 if quality_score >= 90:
-    quality_color = "#4CAF50"
+    quality_color = "#5FA777"
     quality_label = "Excellent"
 elif quality_score >= 70:
-    quality_color = "#FF9800"
+    quality_color = "#D89A4A"
     quality_label = "Good"
 else:
-    quality_color = "#f44336"
+    quality_color = "#C75450"
     quality_label = "Needs Attention"
 
 # ── Metrics Dashboard ──────────────────────────────────────────────────
-st.markdown("### 📊 Dataset Overview")
+st.markdown("##### DATASET READOUT")
 col0, col1, col2, col3, col4, col5 = st.columns(6)
 
 with col0:
@@ -361,7 +419,7 @@ with col2:
     """, unsafe_allow_html=True)
 
 with col3:
-    color = "#4CAF50" if missing_pct == 0 else "#FF9800" if missing_pct < 5 else "#f44336"
+    color = "#5FA777" if missing_pct == 0 else "#D89A4A" if missing_pct < 5 else "#C75450"
     st.markdown(f"""
     <div class="metric-card" style="border-left-color: {color};">
         <div class="label">⚠️ Missing</div>
@@ -370,7 +428,7 @@ with col3:
     """, unsafe_allow_html=True)
 
 with col4:
-    color = "#4CAF50" if duplicates == 0 else "#FF9800"
+    color = "#5FA777" if duplicates == 0 else "#D89A4A"
     st.markdown(f"""
     <div class="metric-card" style="border-left-color: {color};">
         <div class="label">🔄 Duplicates</div>
@@ -450,7 +508,7 @@ with tab2:
                     df, x=selected_col,
                     nbins=30,
                     title=f"Distribution of {selected_col}",
-                    color_discrete_sequence=['#667eea']
+                    color_discrete_sequence=['#E8A33D']
                 )
                 fig.update_layout(
                     showlegend=False,
@@ -462,7 +520,7 @@ with tab2:
                 fig = px.box(
                     df, y=selected_col,
                     title=f"Box Plot of {selected_col}",
-                    color_discrete_sequence=['#667eea']
+                    color_discrete_sequence=['#E8A33D']
                 )
                 fig.update_layout(height=chart_height)
             
@@ -471,7 +529,7 @@ with tab2:
                     df, y=selected_col,
                     box=True,
                     title=f"Violin Plot of {selected_col}",
-                    color_discrete_sequence=['#667eea']
+                    color_discrete_sequence=['#E8A33D']
                 )
                 fig.update_layout(height=chart_height)
             
@@ -479,7 +537,7 @@ with tab2:
                 fig = px.density_contour(
                     df, x=selected_col,
                     title=f"Density Plot of {selected_col}",
-                    color_discrete_sequence=['#667eea']
+                    color_discrete_sequence=['#E8A33D']
                 )
                 fig.update_layout(height=chart_height)
             
@@ -507,7 +565,7 @@ with tab2:
                         y=value_counts.values,
                         title=f"Top Categories - {cat_col}",
                         labels={'x': cat_col, 'y': 'Count'},
-                        color_discrete_sequence=['#667eea']
+                        color_discrete_sequence=['#E8A33D']
                     )
                     fig_bar.update_layout(showlegend=False, height=300)
                     st.plotly_chart(fig_bar, use_container_width=True)
@@ -700,16 +758,16 @@ with tab5:
     # ── AI-style summary banner ──────────────────────────────────────
     summary_lines = []
     if missing_pct == 0:
-        summary_lines.append(("✓", "Low missing values", "#4CAF50"))
+        summary_lines.append(("✓", "Low missing values", "#5FA777"))
     elif missing_pct < 5:
-        summary_lines.append(("✓", f"Acceptable missing values ({missing_pct}%)", "#4CAF50"))
+        summary_lines.append(("✓", f"Acceptable missing values ({missing_pct}%)", "#5FA777"))
     else:
-        summary_lines.append(("⚠", f"High missing values ({missing_pct}%)", "#f44336"))
+        summary_lines.append(("⚠", f"High missing values ({missing_pct}%)", "#C75450"))
 
     if duplicates == 0:
-        summary_lines.append(("✓", "No duplicate records", "#4CAF50"))
+        summary_lines.append(("✓", "No duplicate records", "#5FA777"))
     else:
-        summary_lines.append(("⚠", f"{duplicates} duplicate records found", "#f44336"))
+        summary_lines.append(("⚠", f"{duplicates} duplicate records found", "#C75450"))
 
     # Check for highly skewed numeric features for the summary
     skewed_features = []
@@ -722,12 +780,12 @@ with tab5:
             pass
 
     if skewed_features:
-        summary_lines.append(("⚠", f"{len(skewed_features)} highly skewed numeric feature(s)", "#FF9800"))
+        summary_lines.append(("⚠", f"{len(skewed_features)} highly skewed numeric feature(s)", "#D89A4A"))
     else:
-        summary_lines.append(("✓", "Clean numeric distributions", "#4CAF50"))
+        summary_lines.append(("✓", "Clean numeric distributions", "#5FA777"))
 
     if categorical_cols:
-        summary_lines.append(("✓", "Categorical structure identified", "#4CAF50"))
+        summary_lines.append(("✓", "Categorical structure identified", "#5FA777"))
 
     summary_html = "".join(
         f'<div style="margin:0.3rem 0;color:{c};">{icon} {text}</div>'
