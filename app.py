@@ -52,36 +52,79 @@ st.caption("Powered by Groq Llama 3.3 70B")
 # ── Hero ──────────────────────────────────────────────────────────────────────
 st.markdown("""
 
-# ── Upload ────────────────────────────────────────────────────────────────────
-uploaded = st.file_uploader("Upload your CSV", type=["csv"], label_visibility="collapsed")
+# ── Upload ──────────────────────────────────────────────────────────────
+uploaded = st.file_uploader(
+    "Upload your CSV",
+    type=["csv"],
+    label_visibility="collapsed"
+)
+
 if uploaded is None:
-c1, c2, c3 = st.columns([1,2,1])
-with c2:
-st.markdown("""
 
-📊
-Drop your CSV here
-Sales data · Customer data · Financial reports · Any tabular CSV
-""", unsafe_allow_html=True)
-st.stop()
+    c1, c2, c3 = st.columns([1, 2, 1])
 
-# ── Load & profile ────────────────────────────────────────────────────────────
+    with c2:
+        st.markdown("""
+        <div style="border:2px dashed #1e2d45;
+                    border-radius:14px;
+                    padding:3.5rem 2rem;
+                    text-align:center;
+                    background:#111827;
+                    margin-top:1rem;">
+
+            <div style="font-size:3rem;margin-bottom:1rem">📊</div>
+
+            <p style="color:#e2e8f0;
+                      font-weight:600;
+                      font-size:1.1rem;
+                      margin:0 0 0.5rem">
+                Drop your CSV here
+            </p>
+
+            <p style="color:#64748b;
+                      font-size:0.88rem;
+                      margin:0">
+                Sales data · Customer data · Financial reports · Any tabular CSV
+            </p>
+
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.stop()
+
+# ── Load & profile ──────────────────────────────────────────────────────
 @st.cache_data(show_spinner=False)
 def load_and_profile(file):
-df = pd.read_csv(file)
 
-Smart dtype coercion
-for col in df.columns:
-if df[col].dtype == "object":
-try: df[col] = pd.to_numeric(df[col].str.replace(",",""))
-except: pass
-if df[col].dtype == "object":
-try: df[col] = pd.to_datetime(df[col], infer_datetime_format=True)
-except: pass
-return df
+    df = pd.read_csv(file)
 
-with st.spinner("Profiling dataset…"):
-df = load_and_profile(uploaded)
+    # Smart dtype coercion
+    for col in df.columns:
+
+        if df[col].dtype == "object":
+
+            try:
+                df[col] = pd.to_numeric(
+                    df[col].astype(str).str.replace(",", "")
+                )
+            except:
+                pass
+
+        if df[col].dtype == "object":
+
+            try:
+                df[col] = pd.to_datetime(
+                    df[col],
+                    infer_datetime_format=True
+                )
+            except:
+                pass
+
+    return df
+
+
+with st.spinner("Profiling dataset..."):
+    df = load_and_profile(uploaded)
 
 num_cols = df.select_dtypes(include="number").columns.tolist()
 cat_cols = df.select_dtypes(include=["object","category","bool"]).columns.tolist()
