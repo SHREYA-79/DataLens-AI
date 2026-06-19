@@ -59,7 +59,7 @@ c1, c2, c3 = st.columns([1,2,1])
 with c2:
 st.markdown("""
 
-# 📊
+📊
 Drop your CSV here
 Sales data · Customer data · Financial reports · Any tabular CSV
 """, unsafe_allow_html=True)
